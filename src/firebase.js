@@ -1,15 +1,24 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+import { GoogleAuthProvider } from "firebase/auth/web-extension";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: import.meta.env.FIREBASE_API_KEY,
-  authDomain: import.meta.env.FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.FIREBASE_APP_ID,
-  measurementId: import.meta.env.FIREBASE_MEASUREMENT_ID
-};
+    apiKey: "AIzaSyDaK9bOf_6uggBHcVmu5yqbmAm5yE-tTxk",
+    authDomain: "cal-tool-alpha.firebaseapp.com",
+    projectId: "cal-tool-alpha",
+    storageBucket: "cal-tool-alpha.firebasestorage.app",
+    messagingSenderId: "506852190093",
+    appId: "1:506852190093:web:52fdd8d10931820337ffc4",
+    measurementId: "G-0KT2E0DWRC"
+  };
 
-const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const provider = new GoogleAuthProvider();
+  const db = getFirestore(app);
+  
+  // 🔹 Add Google Calendar API Scope
+  provider.addScope("https://www.googleapis.com/auth/calendar.readonly");
+  
+  export { auth, provider, db };
