@@ -4,40 +4,29 @@ import {
   Container,
   Typography,
   CircularProgress,
-  Card,
-  CardContent,
-  List,
-  ListItem,
-  ListItemText,
-  Divider,
   Alert,
-  Stack
+  Stack,
+  Tabs,
+  Tab,
+  Box
 } from "@mui/material";
-import { BarChart } from '@mui/x-charts/BarChart';
-import { PieChart } from '@mui/x-charts/PieChart';
 import { LocalizationProvider, DatePicker } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs from "dayjs";
 import CalendarSidebar from "./CalendarSidebar";
 import Grid from '@mui/material/Grid';
-import Box from '@mui/material/Box';
-import Paper from '@mui/material/Paper';
-import { styled } from '@mui/material/styles';
 import { auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-
-const Item = styled(Paper)(({ theme }) => ({
-  backgroundColor: '#fff',
-  ...theme.typography.body2,
-  padding: theme.spacing(1),
-  textAlign: 'center',
-  color: theme.palette.text.secondary,
-  ...theme.applyStyles('dark', {
-    backgroundColor: '#1A2027',
-  }),
-}));
+import DataVisualisationDashboard from "./DataVisualisationDashboard";
+import GoalsDashboard from "./GoalsDashboard";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
 
 const Dashboard = ({ onDateChange }) => {
+  // Tab state
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Data states
   const [events, setEvents] = useState([]);
   const [calendarStats, setCalendarStats] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -49,13 +38,46 @@ const Dashboard = ({ onDateChange }) => {
   const [filteredCalendars, setFilteredCalendars] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [filteredCalendarStats, setFilteredCalendarStats] = useState([]);
-  const [TestfilteredTotalHours, setFilteredTotalHours] = useState(filteredCalendarStats.reduce((sum, cal) => sum + cal.totalHours, 0));
-  
   const [showPercent, setShowPercent] = useState(false);
 
   const [user, setUser] = useState(null);
 
-  //console.log("Component Loaded");
+  const [goals, setGoals] = useState([]);
+
+  const fetchCalendarGoals = async () => {
+    const token = localStorage.getItem("accessToken");
+
+    if (!token) {
+      console.log("No access token found - user needs to log in");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      console.log({ user });
+      const goalsCollection = collection(db, `users/${auth.currentUser.uid}/goals`);
+      const goalsSnapshot = await getDocs(goalsCollection);
+
+      // Convert the snapshot to an array of documents with IDs
+      const goalsList = goalsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      setGoals(goalsList || []);
+      console.log("Fetched goals:", goalsList);
+    } catch (error) {
+      console.error("Error in fetchCalendarGoals:", error);
+      setError("Failed to load calendar goals");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
 
   const handleStartDateChange = (newDate) => {
     setStartDate(newDate);
@@ -71,19 +93,18 @@ const Dashboard = ({ onDateChange }) => {
 
   const fetchEvents = async (start = startDate, end = endDate) => {
     const token = localStorage.getItem("accessToken");
-    
+
     if (!token) {
       console.log("No access token found - user needs to log in");
       setLoading(false);
       return;
     }
-    
+
     try {
       setLoading(true);
       const data = await fetchAllCalendarEvents(token, start.toDate(), end.toDate());
       setEvents(data.events || []);
       setCalendarStats(data.calendarStats || []);
-      setFilteredTotalHours(calendarStats.reduce((sum, cal) => sum + cal.totalHours, 0))
     } catch (error) {
       console.error("Error in fetchEvents:", error);
       setError("Failed to load calendar events");
@@ -95,58 +116,52 @@ const Dashboard = ({ onDateChange }) => {
   };
 
   const handleFilterChange = (selectedCalendars) => {
-      console.log({selectedCalendars})
-      setFilteredCalendars(selectedCalendars)
-      setFilteredCalendarStats(calendarStats);
-      setFilteredEvents(events);
-      setFilteredTotalHours(filteredCalendarStats.reduce((sum, cal) => sum + cal.totalHours, 0));
-      console.log({filteredCalendars})
-      //console.log("Filtering!");
+    console.log({ selectedCalendars });
+    setFilteredCalendars(selectedCalendars);
     getFilteredData(selectedCalendars);
   }
 
   const getFilteredData = (selectedCalendars) => {
     if (!selectedCalendars || Object.keys(selectedCalendars).length === 0) {
       // Return early if no selections
-      setFilteredCalendars(selectedCalendars)
+      setFilteredCalendars(selectedCalendars);
       setFilteredCalendarStats(calendarStats);
       setFilteredEvents(events);
-      setFilteredTotalHours(filteredCalendarStats.reduce((sum, cal) => sum + cal.totalHours, 0));
-      //console.log("Nothing Selected")
       return;
     }
-  
+
     const filterCal = calendarStats.filter(cal => {
-      return selectedCalendars[cal.id] === true;  // Add the return statement
+      return selectedCalendars[cal.id] === true;
     });
     setFilteredCalendarStats(filterCal);
-  
+
     const filterEvents = events.filter(event => {
-      return selectedCalendars[event.calendarId] === true;  // Add the return statement
+      return selectedCalendars[event.calendarId] === true;
     });
     setFilteredEvents(filterEvents);
-  
-    //console.log({filterCal});
-   // console.log({filterEvents});
   }
 
+
+  //Init useEffect
   useEffect(() => {
     fetchEvents();
     getFilteredData(filteredCalendars);
+    console.log(auth.currentUser);
+    setUser(auth.currentUser);
+    fetchCalendarGoals();
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
     });
-    
+
     return () => unsubscribe();
   }, []);
+
   useEffect(() => {
     setFilteredCalendarStats(calendarStats);
     setFilteredEvents(events);
   }, [calendarStats, events]);
-
-  
 
   if (loading) {
     return (
@@ -156,7 +171,7 @@ const Dashboard = ({ onDateChange }) => {
       </Container>
     );
   }
-  
+
   if (error) {
     return (
       <Container sx={{ mt: 4 }}>
@@ -165,62 +180,30 @@ const Dashboard = ({ onDateChange }) => {
     );
   }
 
-  const totalHours = calendarStats.reduce((sum, cal) => sum + cal.totalHours, 0);
-  const filteredTotalHours = filteredCalendarStats.reduce((sum, cal) => sum + cal.totalHours, 0);
-
-  // Render list items for events
-  const renderEventItems = () => {
-    const eventItems = [];
-    
-    filteredEvents.forEach((event, index) => {
-      const hours = Math.floor(event.durationHours);
-      const minutes = Math.round((event.durationHours - hours) * 60);
-      let duration = "";
-      
-      if (hours > 0) {
-        duration += `${hours} hour${hours !== 1 ? 's' : ''}`;
-      }
-      if (minutes > 0) {
-        duration += `${hours > 0 ? ' ' : ''}${minutes} minute${minutes !== 1 ? 's' : ''}`;
-      }
-
-      const formatDateTime = (dateTimeStr) => {
-        if (!dateTimeStr) return "N/A";
-        const date = new Date(dateTimeStr);
-        return date.toLocaleString();
-      };
-
-      // Add ListItem
-      eventItems.push(
-        <ListItem key={`item-${event.id}`} alignItems="flex-start">
-          <ListItemText
-            primary={event.summary}
-            secondary={
-              <div>
-                <Typography component="span" variant="body2" color="text.primary">
-                  Calendar: {event.calendarName || "Primary Calendar"}
-                </Typography>
-                <br />
-                Start: {formatDateTime(event.start?.dateTime || event.start?.date)}
-                <br />
-                End: {formatDateTime(event.end?.dateTime || event.end?.date)}
-                <br />
-                Duration: {duration || "N/A"}
-                <br />
-                Location: {event.location || "No location specified"}
-              </div>
-            }
+  // Render the active tab content
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 0:
+        return (
+          <DataVisualisationDashboard
+            filteredCalendarStats={filteredCalendarStats}
+            filteredEvents={filteredEvents}
+            showPercent={showPercent}
           />
-        </ListItem>
-      );
-      
-      // Add Divider if not the last item
-      if (index < filteredEvents.length - 1) {
-        eventItems.push(<Divider key={`divider-${event.id}`} />);
-      }
-    });
-    
-    return eventItems;
+        );
+      case 1:
+        return (
+          <GoalsDashboard
+            calendarStats={filteredCalendarStats}
+            events={filteredEvents}
+            startDate={startDate}
+            endDate={endDate}
+            goals={goals}
+          />
+        );
+      default:
+        return <Typography>Tab content not found</Typography>;
+    }
   };
 
   return (
@@ -228,19 +211,21 @@ const Dashboard = ({ onDateChange }) => {
       <Grid container spacing={3}>
         {/* Sidebar - Takes 3/12 columns on medium+ screens */}
         <Grid item xs={12} md={3}>
-          <CalendarSidebar calendars={calendarStats} onFilterChange={handleFilterChange} setShowPercent={setShowPercent} showPercent={showPercent}/>
+          <CalendarSidebar
+            calendars={calendarStats}
+            onFilterChange={handleFilterChange}
+            setShowPercent={setShowPercent}
+            showPercent={showPercent}
+          />
         </Grid>
-  
+
         {/* Main Content - Takes 9/12 columns on medium+ screens */}
         <Grid item xs={12} md={9}>
           <Typography variant="h4" gutterBottom>Your Calendar Analytics</Typography>
-  
+
           <Box mb={4}>
             <Typography variant="h5" gutterBottom>Time Spent by Calendar</Typography>
-            <Typography variant="body1">
-              Total hours across all calendars: {Math.round(filteredTotalHours * 10) / 10}
-            </Typography>
-    
+
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <Stack direction="row" spacing={2} sx={{ mb: 4, mt: 2 }}>
                 <DatePicker label="Start Date" value={startDate} onChange={handleStartDateChange} />
@@ -248,86 +233,22 @@ const Dashboard = ({ onDateChange }) => {
               </Stack>
             </LocalizationProvider>
           </Box>
-  
-          {/* Charts */}
-          <Box mb={4}>
-            <Paper elevation={2} sx={{ p: 2, mb: 3 }}>
-              <Typography variant="h6" gutterBottom>Hours by Calendar</Typography>
-              <BarChart
-                xAxis={[{ scaleType: "band", data: filteredCalendarStats.map((cal) => cal.name) }]}
-                series={[{
-                  data: filteredCalendarStats.map((cal) => 
-                    showPercent 
-                      ? Math.round((cal.totalHours / filteredTotalHours) * 100)
-                      : cal.totalHours
-                  ),
-                  label: showPercent ? "% of Hours Spent" : "Hours Spent"
-                }]}
-                height={300}
-              />
-            </Paper>
-            
-            <Paper elevation={2} sx={{ p: 2 }}>
-              <Typography variant="h6" gutterBottom>Time Distribution</Typography>
-              <PieChart
-                series={[
-                  {
-                    data: filteredCalendarStats.map((cal) => ({
-                      id: cal.name,
-                      value: Math.round((cal.totalHours / filteredTotalHours) * 100),
-                      label: `${cal.name}`,
-                    })),
-                  },
-                ]}
-                height={300}
-              />
-            </Paper>
+
+          {/* Tab Navigation */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+            <Tabs
+              value={activeTab}
+              onChange={handleTabChange}
+              indicatorColor="primary"
+              textColor="primary"
+            >
+              <Tab label="Overview" />
+              <Tab label="Goals" />
+            </Tabs>
           </Box>
-  
-          {/* Calendar Summary Cards */}
-          <Box mb={4}>
-            <Typography variant="h5" gutterBottom>Calendar Summary</Typography>
-            <Grid container spacing={2}>
-              {filteredCalendarStats.map((cal) => (
-                <Grid item xs={12} sm={6} md={4} key={cal.id}>
-                  <Card
-                    sx={{
-                      borderLeft: `6px solid ${cal.colorId ? `var(--calendar-color-${cal.colorId})` : "#4285F4"}`,
-                      height: '100%'
-                    }}
-                  >
-                    <CardContent>
-                      <Typography variant="h6">{cal.name}</Typography>
-                      <Typography variant="body2">{cal.id}</Typography>
-                      <Typography variant="body2">{cal.roundedHours} hours</Typography>
-                      <Typography variant="body2">
-                        {totalHours > 0 ? Math.round((cal.totalHours / filteredTotalHours) * 100) : 0}% of total time
-                      </Typography>
-                      <Typography variant="body2">{cal.eventCount} events</Typography>
-                    </CardContent>
-                  </Card>
-                </Grid>
-              ))}
-            </Grid>
-          </Box>
-  
-          {/* Event List */}
-          <Box>
-            <Typography variant="h5" gutterBottom>
-              Your Calendar Events
-            </Typography>
-            <Typography variant="body1">Total events: {filteredEvents.length}</Typography>
-  
-            <Paper elevation={2} sx={{ mt: 2 }}>
-              {events.length === 0 ? (
-                <Typography variant="body2" p={2}>
-                  No events found.
-                </Typography>
-              ) : (
-                <List>{renderEventItems()}</List>
-              )}
-            </Paper>
-          </Box>
+
+          {/* Tab Content */}
+          {renderTabContent()}
         </Grid>
       </Grid>
     </Container>
