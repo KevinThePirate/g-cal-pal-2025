@@ -19,6 +19,7 @@ import { auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import DataVisualisationDashboard from "./DataVisualisationDashboard";
 import GoalsDashboard from "./GoalsDashboard";
+import NewGoalDashboard from "./NewGoalDashboard";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -193,13 +194,22 @@ const Dashboard = ({ onDateChange }) => {
         );
       case 1:
         return (
-          <GoalsDashboard
-            calendarStats={filteredCalendarStats}
-            events={filteredEvents}
-            startDate={startDate}
-            endDate={endDate}
-            goals={goals}
-          />
+          <div>
+            <NewGoalDashboard
+              calendarStats={filteredCalendarStats}
+              events={filteredEvents}
+              startDate={startDate}
+              endDate={endDate}
+              goals={goals}
+            />
+            <GoalsDashboard
+              calendarStats={filteredCalendarStats}
+              events={filteredEvents}
+              startDate={startDate}
+              endDate={endDate}
+              goals={goals}
+            />
+          </div>
         );
       default:
         return <Typography>Tab content not found</Typography>;

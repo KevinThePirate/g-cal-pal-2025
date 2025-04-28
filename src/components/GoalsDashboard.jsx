@@ -77,7 +77,6 @@ export default function GoalsDashboard({ calendarStats, goals, events, startDate
             } else if (percentage < 50 && dayjs().isAfter(dayjs(endDate))) {
                 status = 'behind';
             }
-
             return {
                 ...goal,
                 actualHours,
@@ -88,7 +87,7 @@ export default function GoalsDashboard({ calendarStats, goals, events, startDate
                 difference: actualHours - targetHoursForPeriod
             };
         });
-
+        //console.log('Goal Progress:', progress);
         setGoalProgress(progress);
     }, [goals, calendarStats, startDate, endDate]);
 
