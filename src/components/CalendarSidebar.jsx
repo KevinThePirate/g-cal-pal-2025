@@ -18,7 +18,7 @@ import AddGoal from './AddGoal';
 
 console.log({auth})
 
-const CalendarSidebar = ({ calendars, onFilterChange, setShowPercent, showPercent }) => {
+const CalendarSidebar = ({ calendars, onFilterChange, setShowPercent, showPercent, setDataVersion }) => {
   const [selectedCalendars, setSelectedCalendars] = useState({});
   const navigate = useNavigate();
   
@@ -85,7 +85,7 @@ const CalendarSidebar = ({ calendars, onFilterChange, setShowPercent, showPercen
       <Button onClick={logOut} variant="outlined">Log Out</Button>
       
       {/* Add the new goal component here */}
-      <AddNewGoal calendars={calendars}/>
+      <AddNewGoal calendars={calendars} setDataVersion={setDataVersion}/>
       
       <Typography variant="h6" sx={{ mb: 2 }}>Calendar Filters</Typography>
       

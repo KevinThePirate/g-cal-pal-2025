@@ -45,6 +45,9 @@ const Dashboard = ({ onDateChange }) => {
 
   const [goals, setGoals] = useState([]);
 
+  const [dataVersion, setDataVersion] = useState(0);
+
+
   const fetchCalendarGoals = async () => {
     const token = localStorage.getItem("accessToken");
 
@@ -157,7 +160,7 @@ const Dashboard = ({ onDateChange }) => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [dataVersion]);
 
   useEffect(() => {
     setFilteredCalendarStats(calendarStats);
@@ -194,22 +197,14 @@ const Dashboard = ({ onDateChange }) => {
         );
       case 1:
         return (
-          <div>
             <NewGoalDashboard
               calendarStats={filteredCalendarStats}
               events={filteredEvents}
               startDate={startDate}
               endDate={endDate}
               goals={goals}
+              setDataVersion={setDataVersion}
             />
-            <GoalsDashboard
-              calendarStats={filteredCalendarStats}
-              events={filteredEvents}
-              startDate={startDate}
-              endDate={endDate}
-              goals={goals}
-            />
-          </div>
         );
       default:
         return <Typography>Tab content not found</Typography>;
@@ -234,8 +229,6 @@ const Dashboard = ({ onDateChange }) => {
           <Typography variant="h4" gutterBottom>Your Calendar Analytics</Typography>
 
           <Box mb={4}>
-            <Typography variant="h5" gutterBottom>Time Spent by Calendar</Typography>
-
             <LocalizationProvider dateAdapter={AdapterDayjs}>
               <Stack direction="row" spacing={2} sx={{ mb: 4, mt: 2 }}>
                 <DatePicker label="Start Date" value={startDate} onChange={handleStartDateChange} />
